@@ -1,4 +1,6 @@
-# Libraries
+# Fetch electricity consumption data from Hydro One website.
+# Requires username/password to their service
+
 import json
 import requests
 import re
@@ -128,21 +130,12 @@ def main():
         verify=True
     )
 
-    #~ printme("Account info");
-    #~ sAccountInfo = session.get(
-        #~ "https://www.hydroone.com/MyAccount_/Secure/_vti_bin/DCEPServices/DCEPServices.svc/Customer",
-        #~ headers={"Accept" : "application/json, text/plain, */*", "X-Requested-With": "XMLHttpRequest"}
-    #~ ).json();
-
-    #~ print (json.dumps(sAccountInfo,sort_keys=True,indent=4, separators=(',', ': ')));
-
     printme("Going to SharePoint site for My Energy Usage")
     r = session.post(
         "https://www.myaccount.hydroone.com/TOUPortal/SSOTarget.aspx",
         headers={"Accept" : "text/html, application/xhtml+xml, image/jxr, */*", "Content-Type" : "application/x-www-form-urlencoded"},
         data=('accountid=' + creds.get('Hydro One', 'accountid'))
     )
-
     
     printme("Getting default page with daily JSON embedded")
     session.get(
@@ -177,8 +170,6 @@ def main():
     # Read the time zone offset form the xml
     # tzOffset = int(doc['feed']['entry'][1]['content']['LocalTimeParameters']['tzOffset'] )
 
-
-
     for entry in doc['feed']['entry']:
 
         if '/RetailCustomer/1/UsagePoint/' + creds.get('Hydro One', 'meterid') + '/MeterReading/1/IntervalBlock/1' in entry['link'][0]['@href']:
@@ -201,5 +192,6 @@ def main():
     )
 
     printme('Finished')
+
 if __name__== "__main__":
     main()

@@ -14,8 +14,6 @@ from influxdb import InfluxDBClient
 # Load confidential data from local vault
 from creds import getValues
 CREDS = getValues('192.168.1.10', 'creds.encrypted')
-print(CREDS.get('Hydro One', 'username'))
-exit(0)
 HYDRO_USERNAME = CREDS.get('Hydro One', 'username')
 HYDRO_PASSWORD = CREDS.get('Hydro One', 'password')
 HYDRO_ACCOUNTID = CREDS.get('Hydro One', 'accountid')
@@ -122,12 +120,16 @@ def main():
     session = requests.Session()
 
     printme("Authenticating")
-    session.post(
+    r = session.post(
         "https://www.myaccount.hydroone.com/pkmslogin.form",
         data=("username=" + HYDRO_USERNAME + "&password=" +
               HYDRO_PASSWORD + "&UserId=&login-form-type=pwd"),
         headers={"Accept" : "text/html, application/xhtml+xml, image/jxr, */*", "Content-Type" : "application/x-www-form-urlencoded"}
     )
+    # Verify authentication was successful by looking for meta tag with redirect to login page
+    if 'https://www.hydroone.com/login?' in r.text:
+        printme(f"Found meta redirect to 'https://www.hydroone.com/login?' in response. Looks like the authentication failed. Aborting ...")
+        exit(0)
 
     printme("Federating")
     sSSO = session.get(
@@ -179,8 +181,8 @@ def main():
 
     
     # Parse the xml into an object
-    # with open('greenbutton.txt', 'w') as f:
-    #     f.writelines(sGreenButton.text)
+    with open('greenbutton.txt', 'w') as f:
+        f.writelines(sGreenButton.text)
     doc = xmltodict.parse(sGreenButton.text)
     
     # Read the time zone offset form the xml

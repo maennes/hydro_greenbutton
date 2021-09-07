@@ -93,7 +93,7 @@ def main():
 
         # Build decrypted content and save to file
         decryptedContent ="[Hydro One]\nusername = me@gmail.com\npassword = ******\naccountid = 123456\nmeterid = 654321\n\n"
-        decryptedContent +="[InfluxDB]\nusername = me@gmail.com\npassword = ******\nhost = 192.168.1.21\nport = 8086\ndatabase = ext"
+        decryptedContent +="[InfluxDB]\nusername = me@gmail.com\npassword = ******\nhost = 192.168.1.21\nport = 8086\n"
         with open('creds.decrypted', 'wb') as df:
             df.write(bytes(decryptedContent, 'utf-8'))
         

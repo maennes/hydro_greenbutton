@@ -1,5 +1,11 @@
-# Fetch electricity consumption data from Hydro One website.
-# Requires username/password to their service
+# Get electricity consumption data from Hydro One website.
+# The time-based series are stored in InfluxDB.
+
+# Requires username/password to their service at https://www.hydroone.com/myaccount/
+# Also, needs the account ID and meter ID, which are available on
+# regular bills (no spaces for account number)
+
+# This script uses web scraping as Hydro One doesn't offer API access, AFAIK.
 
 import json
 import requests
@@ -8,12 +14,18 @@ import time
 import xmltodict
 import datetime
 import time
+import urllib.parse
 from pytz import timezone
 from influxdb import InfluxDBClient
 
-# Load confidential data from local vault
-from creds import getValues
-CREDS = getValues('192.168.1.10', 'creds.encrypted')
+# Load secret data from locally encrypted file content.
+# The data syntax is defined at https://docs.python.org/3/library/configparser.html
+import sys
+sys.path.insert(1, '../common_functions')
+from creds import getSecrets
+CREDS = getSecrets('192.168.1.10', '../config/creds.encrypted')
+
+# Set parameters
 HYDRO_USERNAME = CREDS.get('Hydro One', 'username')
 HYDRO_PASSWORD = CREDS.get('Hydro One', 'password')
 HYDRO_ACCOUNTID = CREDS.get('Hydro One', 'accountid')
@@ -51,7 +63,7 @@ def extractHidden(s, flag):
         valueObject = re.search('value=".*?"', m)
         valueString = re.search('".*?"', valueObject.group(0)).group(0).replace('"', '')
         if flag == 1:
-            valueString = specialEncode(valueString)
+            valueString = urllib.parse.quote_plus(valueString)
         result += '&' + nameString + "=" + valueString
     return result
 
@@ -65,27 +77,12 @@ def extractInputFromList(s, listOfNames):
             valueObject = re.search('value=".*?"', m)
             valueString = re.search('".*?"', valueObject.group(0)).group(0).replace('"', '')
             if nameString in listOfNames:
-                result += '&' + specialEncode(nameString) + "=" + specialEncode(valueString)
+                result += '&' + \
+                    urllib.parse.quote_plus(nameString) + "=" + urllib.parse.quote_plus(valueString)
         except:
             printme("Failed for " + m)
 
     return result
-
-def specialEncode(s):
-    e = s.replace('&gt;', '%3E')
-    e = e.replace('&lt;', '%3C')
-    e = e.replace('&quot;', '%22')
-    e = e.replace('"', '%22')
-    e = e.replace('#', '%23')
-    e = e.replace('$', '%24')
-    e = e.replace('+', '%2B')
-    e = e.replace('/', '%2F')
-    e = e.replace(':', '%3A')
-    e = e.replace('<', '%3C')
-    e = e.replace('=', '%3D')
-    e = e.replace('>', '%3E')
-    e = e.replace(' ', '+')
-    return e
 
 def extractChartDataJSON(s):
     nameString = re.search(r'ChartDataJSON.*?\}"', s).group(0)
@@ -181,8 +178,8 @@ def main():
 
     
     # Parse the xml into an object
-    with open('greenbutton.txt', 'w') as f:
-        f.writelines(sGreenButton.text)
+    # with open('greenbutton.txt', 'w') as f:
+    #     f.writelines(sGreenButton.text)
     doc = xmltodict.parse(sGreenButton.text)
     
     # Read the time zone offset form the xml

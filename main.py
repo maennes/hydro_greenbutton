@@ -10,16 +10,29 @@ import datetime
 import time
 from pytz import timezone
 from influxdb import InfluxDBClient
+
+# Load confidential data from local vault
 from creds import getValues
+CREDS = getValues('192.168.1.10', 'creds.encrypted')
+print(CREDS.get('Hydro One', 'username'))
+exit(0)
+HYDRO_USERNAME = CREDS.get('Hydro One', 'username')
+HYDRO_PASSWORD = CREDS.get('Hydro One', 'password')
+HYDRO_ACCOUNTID = CREDS.get('Hydro One', 'accountid')
+HYDRO_METERID = CREDS.get('Hydro One', 'meterid')
+INFLUXDB_HOST = CREDS.get('InfluxDB', 'host')
+INFLUXDB_PORT = CREDS.get('InfluxDB', 'port')
+INFLUXDB_USERNAME = CREDS.get('InfluxDB', 'username')
+INFLUXDB_PASSWORD = CREDS.get('InfluxDB', 'password')
+INFLUXDB_DATABASE = 'ext'
 
-creds = getValues()
-
+# Instantiate database
 influxClient = InfluxDBClient(
-    host=creds.get('InfluxDB', 'host'),
-    port=creds.get('InfluxDB', 'port'),
-    username=creds.get('InfluxDB', 'username'),
-    password=creds.get('InfluxDB', 'password'),
-    database='ext'
+    host=INFLUXDB_HOST,
+    port=INFLUXDB_PORT,
+    username=INFLUXDB_USERNAME,
+    password=INFLUXDB_PASSWORD,
+    database=INFLUXDB_DATABASE
 )
 
 def getDateTimeByZone(tz):
@@ -111,8 +124,8 @@ def main():
     printme("Authenticating")
     session.post(
         "https://www.myaccount.hydroone.com/pkmslogin.form",
-        data=("username=" + creds.get('Hydro One', 'username') + "&password=" +
-              creds.get('Hydro One', 'password') + "&UserId=&login-form-type=pwd"),
+        data=("username=" + HYDRO_USERNAME + "&password=" +
+              HYDRO_PASSWORD + "&UserId=&login-form-type=pwd"),
         headers={"Accept" : "text/html, application/xhtml+xml, image/jxr, */*", "Content-Type" : "application/x-www-form-urlencoded"}
     )
 
@@ -134,7 +147,7 @@ def main():
     r = session.post(
         "https://www.myaccount.hydroone.com/TOUPortal/SSOTarget.aspx",
         headers={"Accept" : "text/html, application/xhtml+xml, image/jxr, */*", "Content-Type" : "application/x-www-form-urlencoded"},
-        data=('accountid=' + creds.get('Hydro One', 'accountid'))
+        data=('accountid=' + HYDRO_ACCOUNTID)
     )
     
     printme("Getting default page with daily JSON embedded")
@@ -156,11 +169,14 @@ def main():
     startUnixTime = endUnixTime -  (numberOfDays * 86400) 
     startDate = str((startUnixTime * 10000000) + 621355968000000000)
     endDate = str((endUnixTime * 10000000) + 621355968000000000)
-    
-    sGreenButton =session.get(
-        "https://www.myaccount.hydroone.com/TOUPortal/DownloadData.aspx?timeFormat=hourly&startDate=" + startDate + "&endDate=" + endDate,
-        headers={"Accept" : "text/html, application/xhtml+xml, image/jxr, */*", "X-Requested-With": "XMLHttpRequest"}
-    )  
+    url = "https://www.myaccount.hydroone.com/TOUPortal/DownloadData.aspx?timeFormat=hourly&startDate=" + \
+        startDate + "&endDate=" + endDate
+    # printme(f"-> {url}")
+    sGreenButton = session.get(url,
+        headers={"Accept": "text/html, application/xhtml+xml, image/jxr, */*",
+            "X-Requested-With": "XMLHttpRequest"}
+        )
+
     
     # Parse the xml into an object
     # with open('greenbutton.txt', 'w') as f:
@@ -172,18 +188,22 @@ def main():
 
     for entry in doc['feed']['entry']:
 
-        if '/RetailCustomer/1/UsagePoint/' + creds.get('Hydro One', 'meterid') + '/MeterReading/1/IntervalBlock/1' in entry['link'][0]['@href']:
-            influxClient.write_points(intervalBlocks('On-Peak', 0, entry['content']['IntervalBlock']))
+        if '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/1/IntervalBlock/1' in entry['link'][0]['@href']:
             printme(f"-> On-Peak: {len(entry['content']['IntervalBlock'])} entries found")
+            influxClient.write_points(intervalBlocks(
+                'On-Peak', 0, entry['content']['IntervalBlock']))
 
-        elif '/RetailCustomer/1/UsagePoint/' + creds.get('Hydro One', 'meterid') + '/MeterReading/2/IntervalBlock/2' in entry['link'][0]['@href']:
-            influxClient.write_points(intervalBlocks('Mid-Peak', 0, entry['content']['IntervalBlock']))
+        elif '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/2/IntervalBlock/2' in entry['link'][0]['@href']:
             printme(
                 f"-> Mid-Peak: {len(entry['content']['IntervalBlock'])} entries found")
+            influxClient.write_points(intervalBlocks(
+                'Mid-Peak', 0, entry['content']['IntervalBlock']))
 
-        elif '/RetailCustomer/1/UsagePoint/' + creds.get('Hydro One', 'meterid') + '/MeterReading/3/IntervalBlock/3' in entry['link'][0]['@href']:
-            influxClient.write_points(intervalBlocks('Off-Peak', 0, entry['content']['IntervalBlock']))
-            printme(f"-> Off-Peak: {len(entry['content']['IntervalBlock'])} entries found")
+        elif '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/3/IntervalBlock/3' in entry['link'][0]['@href']:
+            printme(
+                f"-> Off-Peak: {len(entry['content']['IntervalBlock'])} entries found")
+            influxClient.write_points(intervalBlocks(
+                'Off-Peak', 0, entry['content']['IntervalBlock']))
 
     printme("Logging out")
     session.get(

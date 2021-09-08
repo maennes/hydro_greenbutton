@@ -21,9 +21,18 @@ from influxdb import InfluxDBClient
 # Load secret data from locally encrypted file content.
 # The data syntax is defined at https://docs.python.org/3/library/configparser.html
 import sys
-sys.path.insert(1, '../common_functions')
+if sys.platform == 'win32':
+    DIRECTORY_GITHUB = '\\\\nas01\\GitHub\\'
+    DIRECTORY_FUNCTIONS = f"{DIRECTORY_GITHUB}\\common_functions\\"
+    DIRECTORY_CONFIG = f"{DIRECTORY_GITHUB}\\config\\"
+elif sys.platform == 'linux':
+    DIRECTORY_GITHUB = '/nas01/GitHub/'
+    DIRECTORY_FUNCTIONS = f"{DIRECTORY_GITHUB}common_functions/"
+    DIRECTORY_CONFIG = f"{DIRECTORY_GITHUB}config/"
+CREDS_ENCRYPTED = f"{DIRECTORY_CONFIG}creds.encrypted"
+sys.path.insert(1, DIRECTORY_FUNCTIONS)
 from creds import getSecrets
-CREDS = getSecrets('192.168.1.10', '../config/creds.encrypted')
+CREDS = getSecrets('192.168.1.10', CREDS_ENCRYPTED)
 
 # Set parameters
 HYDRO_USERNAME = CREDS.get('Hydro One', 'username')

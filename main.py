@@ -120,7 +120,7 @@ def intervalBlocks(tos, offset, blocks):
 
     return json_body
                 
-def main():
+def do_work():
 
     printme('Getting Hydro One information')
     session = requests.Session()
@@ -220,6 +220,24 @@ def main():
     )
 
     printme('Finished')
+    return True
 
-if __name__== "__main__":
+
+def main():
+
+    # An alert will come from healthchecks.io if not executed every day
+    URL = "https://hc-ping.com/c876eefc-90de-4701-a901-fd8e728e8de4"
+    requests.get(URL + "/start")
+
+    success = False
+    try:
+        success = do_work()
+    finally:
+        # On success, requests https://hc-ping.com/your-uuid-here
+        # On failure, requests https://hc-ping.com/your-uuid-here/fail
+        r = requests.get(URL if success else URL + "/fail")
+        printme(f"request to healthchecks.io was {r.text}")
+
+
+if __name__ == "__main__":
     main()

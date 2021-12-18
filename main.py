@@ -39,6 +39,7 @@ HYDRO_USERNAME = CREDS.get('Hydro One', 'username')
 HYDRO_PASSWORD = CREDS.get('Hydro One', 'password')
 HYDRO_ACCOUNTID = CREDS.get('Hydro One', 'accountid')
 HYDRO_METERID = CREDS.get('Hydro One', 'meterid')
+HYDRO_HEALTHCHECK_URL = CREDS.get('Hydro One', 'healthcheckUrl')
 INFLUXDB_HOST = CREDS.get('InfluxDB', 'host')
 INFLUXDB_PORT = CREDS.get('InfluxDB', 'port')
 INFLUXDB_USERNAME = CREDS.get('InfluxDB', 'username')
@@ -185,7 +186,6 @@ def do_work():
             "X-Requested-With": "XMLHttpRequest"}
         )
 
-    
     # Parse the xml into an object
     # with open('greenbutton.txt', 'w') as f:
     #     f.writelines(sGreenButton.text)
@@ -196,18 +196,18 @@ def do_work():
 
     for entry in doc['feed']['entry']:
 
-        if '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/1/IntervalBlock/1' in entry['link'][0]['@href']:
+        if '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/1/IntervalBlock/1' in entry['link'][0]['@href'] and entry['content']:
             printme(f"-> On-Peak: {len(entry['content']['IntervalBlock'])} entries found")
             influxClient.write_points(intervalBlocks(
                 'On-Peak', 0, entry['content']['IntervalBlock']))
 
-        elif '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/2/IntervalBlock/2' in entry['link'][0]['@href']:
+        elif '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/2/IntervalBlock/2' in entry['link'][0]['@href'] and entry['content']:
             printme(
                 f"-> Mid-Peak: {len(entry['content']['IntervalBlock'])} entries found")
             influxClient.write_points(intervalBlocks(
                 'Mid-Peak', 0, entry['content']['IntervalBlock']))
 
-        elif '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/3/IntervalBlock/3' in entry['link'][0]['@href']:
+        elif '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/3/IntervalBlock/3' in entry['link'][0]['@href'] and entry['content']:
             printme(
                 f"-> Off-Peak: {len(entry['content']['IntervalBlock'])} entries found")
             influxClient.write_points(intervalBlocks(
@@ -226,8 +226,7 @@ def do_work():
 def main():
 
     # An alert will come from healthchecks.io if not executed every day
-    URL = "https://hc-ping.com/c876eefc-90de-4701-a901-fd8e728e8de4"
-    requests.get(URL + "/start")
+    requests.get(HYDRO_HEALTHCHECK_URL + "/start")
 
     success = False
     try:
@@ -235,8 +234,9 @@ def main():
     finally:
         # On success, requests https://hc-ping.com/your-uuid-here
         # On failure, requests https://hc-ping.com/your-uuid-here/fail
-        r = requests.get(URL if success else URL + "/fail")
-        printme(f"request to healthchecks.io was {r.text}")
+        r = requests.get(
+            HYDRO_HEALTHCHECK_URL if success else HYDRO_HEALTHCHECK_URL + "/fail")
+        printme(f"healthchecks.io request was received {r.text}")
 
 
 if __name__ == "__main__":

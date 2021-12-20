@@ -118,7 +118,6 @@ def intervalBlocks(tos, offset, blocks):
                         "duration": int(IntervalReading['timePeriod']['duration']) * 1
                     }
                 })
-
     return json_body
                 
 def do_work():
@@ -196,23 +195,30 @@ def do_work():
 
     for entry in doc['feed']['entry']:
 
-        if '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/1/IntervalBlock/1' in entry['link'][0]['@href'] and entry['content']:
-            printme(f"-> On-Peak: {len(entry['content']['IntervalBlock'])} entries found")
-            influxClient.write_points(intervalBlocks(
+        if '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/1/IntervalBlock/1' in entry['link'][0]['@href']:
+            try:
+                printme(f"-> On-Peak: {len(entry['content']['IntervalBlock'])} entries found")
+                influxClient.write_points(intervalBlocks(
                 'On-Peak', 0, entry['content']['IntervalBlock']))
+            except:
+                printme(f"Error with {entry}")
 
-        elif '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/2/IntervalBlock/2' in entry['link'][0]['@href'] and entry['content']:
-            printme(
-                f"-> Mid-Peak: {len(entry['content']['IntervalBlock'])} entries found")
-            influxClient.write_points(intervalBlocks(
+        elif '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/2/IntervalBlock/2' in entry['link'][0]['@href']:
+            try:
+                printme(f"-> Mid-Peak: {len(entry['content']['IntervalBlock'])} entries found")
+                influxClient.write_points(intervalBlocks(
                 'Mid-Peak', 0, entry['content']['IntervalBlock']))
+            except:
+                printme(f"Error with {entry}")
 
-        elif '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/3/IntervalBlock/3' in entry['link'][0]['@href'] and entry['content']:
-            printme(
-                f"-> Off-Peak: {len(entry['content']['IntervalBlock'])} entries found")
-            influxClient.write_points(intervalBlocks(
+        elif '/RetailCustomer/1/UsagePoint/' + HYDRO_METERID + '/MeterReading/3/IntervalBlock/3' in entry['link'][0]['@href']:
+            try:
+                printme(f"-> Off-Peak: {len(entry['content']['IntervalBlock'])} entries found")
+                influxClient.write_points(intervalBlocks(
                 'Off-Peak', 0, entry['content']['IntervalBlock']))
-
+            except:
+                printme(f"Error with {entry}")
+        
     printme("Logging out")
     session.get(
         "https://www.hydroone.com/_layouts/15/SignOut.aspx",

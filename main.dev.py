@@ -31,6 +31,7 @@ CREDS_ENCRYPTED = f"{DIRECTORY_CONFIG}creds.encrypted"
 sys.path.insert(1, DIRECTORY_FUNCTIONS)
 from creds import getSecrets
 CREDS = getSecrets('192.168.1.10', CREDS_ENCRYPTED)
+
 # Set parameters
 HYDRO_USERNAME = CREDS.get('Hydro One', 'username')
 HYDRO_PASSWORD = CREDS.get('Hydro One', 'password')
@@ -52,17 +53,14 @@ influxClient = InfluxDBClient(
     database=INFLUXDB_DATABASE
 )
 
-
 def getDateTimeByZone(tz):
     t = timezone(tz)
     return datetime.datetime.now(t)
-
-
-def printme(str):
+    
+def printme( str ):
     t = getDateTimeByZone('US/Eastern')
-    print(t.strftime("%Y-%m-%d %H:%M:%S"), str)
+    print (t.strftime("%Y-%m-%d %H:%M:%S"), str)
     return
-
 
 def processChartData(strHtml, strPeriod):
     soup = BeautifulSoup(strHtml, 'html.parser')
@@ -93,8 +91,7 @@ def processChartData(strHtml, strPeriod):
         else:
             printme(e)
         exit(0)
-
-
+    
 def do_work():
 
     printme('Getting Hydro One information')
@@ -105,8 +102,7 @@ def do_work():
         "https://www.myaccount.hydroone.com/pkmslogin.form",
         data=("username=" + HYDRO_USERNAME + "&password=" +
               HYDRO_PASSWORD + "&UserId=&login-form-type=pwd"),
-        headers={"Accept": "text/html, application/xhtml+xml, image/jxr, */*",
-                 "Content-Type": "application/x-www-form-urlencoded"}
+        headers={"Accept" : "text/html, application/xhtml+xml, image/jxr, */*", "Content-Type" : "application/x-www-form-urlencoded"}
     )
     # Verify authentication was successful by looking for meta tag with redirect to login page
     if 'https://www.hydroone.com/login?' in r.text:
@@ -116,25 +112,23 @@ def do_work():
     printme("Federating")
     session.get(
         "https://www.myaccount.hydroone.com/FIM/sps/WSFedPassiveX/wsf?wa=wsignin1.0&wtrealm=urn%3aecustomer%3aprod&wctx=https%3a%2f%2fwww.hydroone.com%2fMyAccount_%2fSecure%2f_layouts%2f15%2fAuthenticate.aspx%3fSource%3d%252Fmyaccount%252Fsecure",
-        headers={"Accept": "text/html, application/xhtml+xml, image/jxr, */*"}
+        headers={"Accept" : "text/html, application/xhtml+xml, image/jxr, */*"}
     )
 
     printme("Trusting")
     session.post(
         "https://www.hydroone.com/_trust/",
-        headers={"Accept": "text/html, application/xhtml+xml, image/jxr, */*",
-                 "Content-Type": "application/x-www-form-urlencoded"},
+        headers={"Accept" : "text/html, application/xhtml+xml, image/jxr, */*", "Content-Type" : "application/x-www-form-urlencoded"},
         verify=True
     )
 
     printme("Going to SharePoint site for My Energy Usage")
     session.post(
         "https://www.myaccount.hydroone.com/TOUPortal/SSOTarget.aspx",
-        headers={"Accept": "text/html, application/xhtml+xml, image/jxr, */*",
-                 "Content-Type": "application/x-www-form-urlencoded"},
+        headers={"Accept" : "text/html, application/xhtml+xml, image/jxr, */*", "Content-Type" : "application/x-www-form-urlencoded"},
         data=('accountid=' + HYDRO_ACCOUNTID)
     )
-
+    
     printme("Getting default page")
     session.get(
         "https://www.myaccount.hydroone.com/TOUPortal/Post.aspx",
@@ -163,11 +157,11 @@ def do_work():
             }
         )
         processChartData(r.text, period)
-
+    
     printme("Logging out")
     session.get(
         "https://www.hydroone.com/_layouts/15/SignOut.aspx",
-        headers={"Accept": "text/html, application/xhtml+xml, image/jxr, */*"}
+        headers={"Accept" : "text/html, application/xhtml+xml, image/jxr, */*"}
     )
 
     printme('Finished')
@@ -188,7 +182,6 @@ def main():
         r = requests.get(
             HYDRO_HEALTHCHECK_URL if success else HYDRO_HEALTHCHECK_URL + "/fail")
         printme(f"healthchecks.io request was received {r.text}")
-
 
 if __name__ == "__main__":
     main()

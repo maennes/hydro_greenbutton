@@ -9,39 +9,22 @@
 
 import json
 import requests
-import re
 import datetime
-import urllib.parse
 from pytz import timezone
 from influxdb import InfluxDBClient
 from bs4 import BeautifulSoup
 
-# Load secret data from locally encrypted file content.
-# The data syntax is defined at https://docs.python.org/3/library/configparser.html
-import sys
-if sys.platform == 'win32':
-    DIRECTORY_GITHUB = '\\\\nas01\\GitHub\\'
-    DIRECTORY_FUNCTIONS = f"{DIRECTORY_GITHUB}\\common_functions\\"
-    DIRECTORY_CONFIG = f"{DIRECTORY_GITHUB}\\config\\"
-elif sys.platform == 'linux':
-    DIRECTORY_GITHUB = '/nas01/GitHub/'
-    DIRECTORY_FUNCTIONS = f"{DIRECTORY_GITHUB}common_functions/"
-    DIRECTORY_CONFIG = f"{DIRECTORY_GITHUB}config/"
-CREDS_ENCRYPTED = f"{DIRECTORY_CONFIG}creds.encrypted"
-sys.path.insert(1, DIRECTORY_FUNCTIONS)
-from creds import getSecrets
-CREDS = getSecrets('192.168.1.10', CREDS_ENCRYPTED)
 # Set parameters
-HYDRO_USERNAME = CREDS.get('Hydro One', 'username')
-HYDRO_PASSWORD = CREDS.get('Hydro One', 'password')
-HYDRO_ACCOUNTID = CREDS.get('Hydro One', 'accountid')
-HYDRO_METERID = CREDS.get('Hydro One', 'meterid')
-HYDRO_HEALTHCHECK_URL = CREDS.get('Hydro One', 'healthcheckUrl')
-INFLUXDB_HOST = CREDS.get('InfluxDB', 'host')
-INFLUXDB_PORT = CREDS.get('InfluxDB', 'port')
-INFLUXDB_USERNAME = CREDS.get('InfluxDB', 'username')
-INFLUXDB_PASSWORD = CREDS.get('InfluxDB', 'password')
-INFLUXDB_DATABASE = 'ext'
+HYDRO_USERNAME = '******'
+HYDRO_PASSWORD = '******'
+HYDRO_ACCOUNTID = '******'
+HYDRO_METERID = '******'
+
+INFLUXDB_HOST = '******'
+INFLUXDB_PORT = '******'
+INFLUXDB_USERNAME = '******'
+INFLUXDB_PASSWORD = '******'
+INFLUXDB_DATABASE = '******'
 
 # Instantiate database
 influxClient = InfluxDBClient(
@@ -94,8 +77,7 @@ def processChartData(strHtml, strPeriod):
             printme(e)
         exit(0)
 
-
-def do_work():
+def main():
 
     printme('Getting Hydro One information')
     session = requests.Session()
@@ -171,23 +153,6 @@ def do_work():
     )
 
     printme('Finished')
-    return True
-
-
-def main():
-
-    # An alert will come from healthchecks.io if not executed every day
-    requests.get(HYDRO_HEALTHCHECK_URL + "/start")
-
-    success = False
-    try:
-        success = do_work()
-    finally:
-        # On success, requests https://hc-ping.com/your-uuid-here
-        # On failure, requests https://hc-ping.com/your-uuid-here/fail
-        r = requests.get(
-            HYDRO_HEALTHCHECK_URL if success else HYDRO_HEALTHCHECK_URL + "/fail")
-        printme(f"healthchecks.io request was received {r.text}")
 
 
 if __name__ == "__main__":
